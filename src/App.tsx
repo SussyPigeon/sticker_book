@@ -1,14 +1,15 @@
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { Button } from "./components/ui/Button";
-import { Input } from "./components/ui/Input";
+import { Button } from "@/components/ui/button";
 import "./App.css";
+import logo from "@/assets/react.svg";
+import { StickerPicker } from "./components/sticker-picker";
 
 function App() {
   return (
     <div className="flex h-screen font-family-sans">
       {/* Sidebar */}
-      <div className="w-60 bg-gray-850 flex flex-col">
+      <div className="w-60 bg-gray-800 flex flex-col">
         <div className="h-12 px-4 flex items-center border-b border-gray-900 shadow-md">
           <h1 className="text-white font-bold">My Tauri App</h1>
         </div>
@@ -40,7 +41,43 @@ function App() {
               <Button variant="primary">Primary Action</Button>
               <Button variant="secondary">Secondary</Button>
               <Button variant="success">Success</Button>
+              <Button variant="danger">Danger</Button>
+              <Button variant="ghost">Ghost</Button>
             </div>
+            <br />
+            <div className="flex gap-2">
+              <Button variant="primary" size="sm">
+                sm
+              </Button>
+              <Button variant="primary" size="md">
+                md
+              </Button>
+              <Button variant="primary" size="lg">
+                lg
+              </Button>
+            </div>
+
+            <br />
+            <div className="flex gap-5">
+              <Button variant="ghost">
+                <img src={logo} />
+              </Button>
+
+              <Button variant="ghost">
+                <img src={logo} />
+              </Button>
+
+              <Button variant="ghost">
+                <img src={logo} />
+              </Button>
+
+              <Button variant="ghost">
+                <img src={logo} />
+              </Button>
+            </div>
+
+            <br />
+            <StickerPicker />
           </div>
         </div>
       </div>

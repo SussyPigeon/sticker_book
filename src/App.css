@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@source "./**/*.{js,ts,jsx,tsx}";
 
 @font-face {
   font-family: "Source Sans 3";
@@ -17,29 +16,17 @@
 }
 
 :root {
+  --color-background-primary: oklch(0.2084 0.0025 247.95);
+  --color-background-secondary: oklch(0.2973 0.0056 271.23);
+  --color-background-tertiary: oklch(0.3451 0.0071 274.78);
+
+  --color-foreground-primary: oklch(1 0 0);
+  --color-foreground-secondary: oklch(0.6855 0.005 258.33);
+
   --color-primary: oklch(0.5774 0.2091 273.85);
-  --color-primary-foreground: #ffffff;
-
-  --color-secondary: #4e5058;
-  --color-secondary-foreground: #ffffff;
-
-  --color-success: #57f287;
-  --color-success-foreground: #000000;
-
-  --color-warn: #fee75c;
-  --color-warn-foreground: #000000;
-
-  --color-error: #ed4245;
-  --color-error: #000000;
-
-  --color-info: #00aff4;
-  --color-info-foreground: #ffffff;
-
-  --color-background: #1e1f22;
-  --color-foreground: #dbdee1;
-
-  --color-muted: #2b2d31;
-  --color-muted-foreground: #949ba4;
+  --color-secondary: oklch(0.3451 0.0071 274.78);
+  --color-success: oklch(0.6372 0.1542 152.56);
+  --color-danger: oklch(0.6318 0.2075 24.57);
 }
 
 @layer base {
@@ -72,20 +59,21 @@
 }
 
 @theme {
+  --color-background-primary: var(--color-background-primary);
+  --color-background-secondary: var(--color-background-secondary);
+  --color-background-tertiary: var(--color-background-tertiary);
+
+  --color-foreground-primary: var(--color-foreground-primary);
+  --color-foreground-secondary: var(--color-foreground-secondary);
+
   --color-primary: var(--color-primary);
-  --color-primary-foreground: var(--color-primary-foreground);
   --color-secondary: var(--color-secondary);
-  --color-secondary-foreground: var(--color-secondary-foreground);
   --color-success: var(--color-success);
-  --color-success-foreground: var(--color-success-foreground);
-  --color-warn: var(--color-warn);
-  --color-warn-foreground: var(--color-warn-foreground);
-  --color-error: var(--color-error);
-  --color-error-foreground: var(--color-error-foreground);
-  --color-info: var(--color-info);
-  --color-info-foreground: var(--color-info-foreground);
-  --color-background: var(--color-background);
-  --color-foreground: var(--color-foreground);
-  --color-muted: var(--color-muted);
-  --color-muted-foreground: var(--color-muted-foreground);
+  --color-danger: var(--color-danger);
+
+  --radius-xl: 0.5rem;
+  --radius-2xl: 0.75rem;
+  --radius-3xl: 1rem;
+
+  --shadow-app-sm: "0 1px 0 rgba(4, 4, 5, 0.2), 0 1.5px 0 rgba(6, 6, 7, 0.05), 0 2px 0 rgba(4, 4, 5, 0.05)";
 }
