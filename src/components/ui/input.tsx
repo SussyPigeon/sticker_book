@@ -1,6 +1,7 @@
-import React from "react";
+import * as React from "react";
+import { cn } from "@/lib/utils";
 
-export const Input = ({ label, error, className = "", ...props }) => {
+const Input = ({ label, error, className = "", ...props }) => {
   return (
     <div className="flex flex-col gap-2">
       {label && (
@@ -18,3 +19,5 @@ export const Input = ({ label, error, className = "", ...props }) => {
     </div>
   );
 };
+
+export { Input };
