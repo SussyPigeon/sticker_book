@@ -25,7 +25,7 @@ interface Sticker {
 
 async function getStickerUrl(relativePath: string): Promise<string> {
   const appData = await appDataDir();
-  const abosolutePath = `${appData}${relativePath}`;
+  const abosolutePath = `${appData}/${relativePath}`;
   return convertFileSrc(abosolutePath);
 }
 
@@ -89,7 +89,17 @@ async function importStickerPack(files: File[]): Promise<StickerPack> {
 
 async function saveStickerPackMetadata(pack: StickerPack) {
   const manifestPath = `stickers/${pack.id}/manifest.json`;
-  await writeTextFile(manifestPath, JSON.stringify(pack, null, 2), {
+  const packToSave = {
+    ...pack,
+    stickers: pack.stickers.map((s) => ({
+      id: s.id,
+      filename: s.filename,
+      path: s.path,
+      url: "",
+    })),
+  };
+
+  await writeTextFile(manifestPath, JSON.stringify(packToSave, null, 2), {
     baseDir: BaseDirectory.AppData,
   });
   console.log("Saved manifest: ", manifestPath);
@@ -112,7 +122,7 @@ async function loadUserStickerPacks(): Promise<StickerPack[]> {
 
     for (const entry of entries) {
       if (entry.isDirectory) {
-        const manifestPath = `stickers${entry.name}/manifest.json`;
+        const manifestPath = `stickers/${entry.name}/manifest.json`;
 
         const manifestExists = await exists(manifestPath, {
           baseDir: BaseDirectory.AppData,
@@ -129,9 +139,9 @@ async function loadUserStickerPacks(): Promise<StickerPack[]> {
           const pack = JSON.parse(content);
 
           pack.stickers = await Promise.all(
-            pack.stickers.map((s: Sticker) => ({
+            pack.stickers.map(async (s: Sticker) => ({
               ...s,
-              url: convertFileSrc(s.path, "appdata"),
+              url: await getStickerUrl(s.path),
             })),
           );
 
