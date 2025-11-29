@@ -5,6 +5,11 @@
   "windows": ["main"],
   "permissions": [
     "core:default",
-    "opener:default"
+    "opener:default",
+    "fs:allow-read",
+    "fs:allow-appdata-read-recursive",
+    "fs:allow-exists",
+    "fs:allow-appdata-write-recursive",
+    "fs:allow-appdata-meta-recursive"
   ]
 }
