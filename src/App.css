@@ -1,79 +1,79 @@
 @import "tailwindcss";
 
 @font-face {
-  font-family: "Source Sans 3";
-  src: url("./assets/fonts/SourceSans3-VariableFont_wght.woff2") format("woff2");
-  font-weight: 200 900;
-  font-style: normal;
+	font-family: "Source Sans 3";
+	src: url("./assets/fonts/SourceSans3-VariableFont_wght.woff2") format("woff2");
+	font-weight: 200 900;
+	font-style: normal;
 }
 
 @font-face {
-  font-family: "Source Sans 3";
-  src: url("./assets/fonts/SourceSans3-Italic-VariableFont_wght.woff2")
-    format("woff2");
-  font-weight: 200 900;
-  font-style: italic;
+	font-family: "Source Sans 3";
+	src: url("./assets/fonts/SourceSans3-Italic-VariableFont_wght.woff2")
+		format("woff2");
+	font-weight: 200 900;
+	font-style: italic;
 }
 
 :root {
-  --color-background-primary: oklch(0.2084 0.0025 247.95);
-  --color-background-secondary: oklch(0.2973 0.0056 271.23);
-  --color-background-tertiary: oklch(0.3451 0.0071 274.78);
+	--color-background-primary: oklch(0.2084 0.0025 247.95);
+	--color-background-secondary: oklch(0.2973 0.0056 271.23);
+	--color-background-tertiary: oklch(0.3451 0.0071 274.78);
 
-  --color-foreground-primary: oklch(1 0 0);
-  --color-foreground-secondary: oklch(0.6855 0.005 258.33);
+	--color-foreground-primary: oklch(1 0 0);
+	--color-foreground-secondary: oklch(0.6855 0.005 258.33);
 
-  --color-primary: oklch(0.5774 0.2091 273.85);
-  --color-secondary: oklch(0.3451 0.0071 274.78);
-  --color-success: oklch(0.6372 0.1542 152.56);
-  --color-danger: oklch(0.6318 0.2075 24.57);
+	--color-primary: oklch(0.5774 0.2091 273.85);
+	--color-secondary: oklch(0.3451 0.0071 274.78);
+	--color-success: oklch(0.6372 0.1542 152.56);
+	--color-danger: oklch(0.6318 0.2075 24.57);
 }
 
 @layer base {
-  * {
-    border-color: var(--color-gray-700);
-  }
+	* {
+		border-color: var(--color-gray-700);
+	}
 
-  body {
-    font-family: "Source Sans 3", Helvetica, Arial, sans-serif;
-    background-color: var(--color-gray-800);
-    color: var(--color-gray-100);
-  }
+	body {
+		font-family: "Source Sans 3", Helvetica, Arial, sans-serif;
+		background-color: var(--color-gray-800);
+		color: var(--color-gray-100);
+	}
 
-  ::-webkit-scrollbar {
-    width: 16px;
-  }
+	::-webkit-scrollbar {
+		width: 16px;
+	}
 
-  ::-webkit-scrollbar-track {
-    background-color: var(--color-gray-850);
-  }
+	::-webkit-scrollbar-track {
+		background-color: var(--color-gray-850);
+	}
 
-  ::-webkit-scrollbar-thumb {
-    background-color: var(--color-gray-900);
-    border-radius: 8px;
+	::-webkit-scrollbar-thumb {
+		background-color: var(--color-gray-900);
+		border-radius: 8px;
 
-    :hover {
-      background-color: var(--color-gray-950);
-    }
-  }
+		:hover {
+			background-color: var(--color-gray-950);
+		}
+	}
 }
 
 @theme {
-  --color-background-primary: var(--color-background-primary);
-  --color-background-secondary: var(--color-background-secondary);
-  --color-background-tertiary: var(--color-background-tertiary);
+	--color-background-primary: var(--color-background-primary);
+	--color-background-secondary: var(--color-background-secondary);
+	--color-background-tertiary: var(--color-background-tertiary);
 
-  --color-foreground-primary: var(--color-foreground-primary);
-  --color-foreground-secondary: var(--color-foreground-secondary);
+	--color-foreground-primary: var(--color-foreground-primary);
+	--color-foreground-secondary: var(--color-foreground-secondary);
 
-  --color-primary: var(--color-primary);
-  --color-secondary: var(--color-secondary);
-  --color-success: var(--color-success);
-  --color-danger: var(--color-danger);
+	--color-primary: var(--color-primary);
+	--color-secondary: var(--color-secondary);
+	--color-success: var(--color-success);
+	--color-danger: var(--color-danger);
 
-  --radius-xl: 0.5rem;
-  --radius-2xl: 0.75rem;
-  --radius-3xl: 1rem;
+	--radius-xl: 0.5rem;
+	--radius-2xl: 0.75rem;
+	--radius-3xl: 1rem;
 
-  --shadow-app-sm: "0 1px 0 rgba(4, 4, 5, 0.2), 0 1.5px 0 rgba(6, 6, 7, 0.05), 0 2px 0 rgba(4, 4, 5, 0.05)";
+	--shadow-app-sm: "0 1px 0 rgba(4, 4, 5, 0.2), 0 1.5px 0 rgba(6, 6, 7, 0.05), 0 2px 0 rgba(4, 4, 5, 0.05)";
 }
