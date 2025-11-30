@@ -52,7 +52,6 @@ const StickerItem = ({
 				<div
 					className={cn(
 						"absolute -top-1 -right-1 w-5 h-5 rounded-full border",
-						"flex items-center justify-center",
 						{
 							"border-4 border-primary bg-foreground-primary": isSelected,
 							"border-foreground-secondary bg-background-tertiary": !isSelected,

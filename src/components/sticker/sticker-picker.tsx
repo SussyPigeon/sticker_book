@@ -4,6 +4,7 @@ import {
 	loadUserStickerPacks,
 	type StickerPack,
 } from "@/lib/stickers";
+import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 import { StickerItem } from "./sticker-item";
 
@@ -56,7 +57,7 @@ const StickerPicker = () => {
 			<div className="flex items-center justify-between mb-4">
 				<h2 className="text-xl font-bold">Stickers</h2>
 
-				{editMode ? (
+				{editMode && (
 					<div className="flex gap-2">
 						<Button
 							onClick={deleteSelectedStickers}
@@ -69,17 +70,6 @@ const StickerPicker = () => {
 							Done
 						</Button>
 					</div>
-				) : (
-					<label className="px-3 py-1 bg-primary text-foreground-primary rounded cursor-pointer">
-						Import
-						<input
-							type="file"
-							accept="image/png, image/jpeg, image/gif, image/webp"
-							multiple
-							onChange={handleImport}
-							className="hidden"
-						/>
-					</label>
 				)}
 			</div>
 
@@ -96,6 +86,33 @@ const StickerPicker = () => {
 							onUse={(sticker) => console.log("Use sticker: ", sticker)}
 						/>
 					)),
+				)}
+				{!editMode && (
+					<label
+						className={cn(
+							"group relative w-16 h-16 flex flex-col items-center justify-center cursor-pointer",
+							"transition-colors duration-200 hover:bg-background-tertiary/25 hover:scale-110",
+						)}
+					>
+						<div className="w-16 h-16 flex flex-col items-center justify-center group-hover:scale-[0.909]">
+							<div
+								className={cn(
+									"bg-primary cursor-pointer rounded-full w-8 h-8 flex items-center justify-center text-center",
+									"font-extrabold text-2xl group-hover:text-3xl transition-all duration-200 ease-in",
+								)}
+							>
+								+
+							</div>
+							<div className="text-xs mt-1">Add Item</div>
+						</div>
+						<input
+							type="file"
+							accept="image/png, image/jpeg, image/gif, image/webp"
+							multiple
+							onChange={handleImport}
+							className="hidden"
+						/>
+					</label>
 				)}
 			</div>
 		</div>
