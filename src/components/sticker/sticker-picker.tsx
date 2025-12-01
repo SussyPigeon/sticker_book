@@ -1,3 +1,4 @@
+import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
 	importStickerPack,
@@ -95,13 +96,8 @@ const StickerPicker = () => {
 						)}
 					>
 						<div className="w-16 h-16 flex flex-col items-center justify-center group-hover:scale-[0.909]">
-							<div
-								className={cn(
-									"bg-primary cursor-pointer rounded-full w-8 h-8 flex items-center justify-center text-center",
-									"font-extrabold text-2xl group-hover:text-3xl transition-all duration-200 ease-in",
-								)}
-							>
-								+
+							<div className="bg-primary cursor-pointer rounded-full w-8 h-8 flex items-center justify-center">
+								<Plus className="stroke-2 group-hover:stroke-3 transition-[stroke-width] duration-200 ease-in" />
 							</div>
 							<div className="text-xs mt-1">Add Item</div>
 						</div>
