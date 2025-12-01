@@ -14,6 +14,8 @@ interface StickerPack {
 	id: string;
 	name: string;
 	stickers: Sticker[];
+	createdAt: number;
+	order: number;
 }
 
 interface Sticker {
@@ -21,12 +23,12 @@ interface Sticker {
 	filename: string;
 	path: string;
 	url: string;
+	order: number;
 }
 
-async function getStickerUrl(relativePath: string): Promise<string> {
-	const appData = await appDataDir();
-	const abosolutePath = `${appData}/${relativePath}`;
-	return convertFileSrc(abosolutePath);
+interface PackRegistry {
+	packs: Array<{ id: string; order: number }>;
+	nextOrder: number;
 }
 
 async function initStickerStorage() {
@@ -56,7 +58,10 @@ async function importStickerPack(files: File[]): Promise<StickerPack> {
 	});
 
 	const stickers: Sticker[] = [];
-	for (const file of files) {
+	const sortedFiles = [...files].sort((a, b) => a.name.localeCompare(b.name));
+
+	for (let i = 0; i < sortedFiles.length; i++) {
+		const file = sortedFiles[i];
 		const destPath = `${packDir}/${file.name}`;
 		const arrayBuffer = await file.arrayBuffer();
 		const uint8Array = new Uint8Array(arrayBuffer);
@@ -72,19 +77,29 @@ async function importStickerPack(files: File[]): Promise<StickerPack> {
 			filename: file.name,
 			path: destPath,
 			url,
+			order: i,
 		});
 
 		console.log("Imported sticker: ", file.name, "URL: ", url);
 	}
 
+	const packOrder = await addPackToRegistry(packId);
 	const pack: StickerPack = {
 		id: packId,
 		name: `Pack ${Date.now()}`,
 		stickers,
+		createdAt: Date.now(),
+		order: packOrder,
 	};
 	await saveStickerPackMetadata(pack);
 
 	return pack;
+}
+
+async function getStickerUrl(relativePath: string): Promise<string> {
+	const appData = await appDataDir();
+	const abosolutePath = `${appData}/${relativePath}`;
+	return convertFileSrc(abosolutePath);
 }
 
 async function saveStickerPackMetadata(pack: StickerPack) {
@@ -96,6 +111,7 @@ async function saveStickerPackMetadata(pack: StickerPack) {
 			filename: s.filename,
 			path: s.path,
 			url: "",
+			order: s.order,
 		})),
 	};
 
@@ -115,13 +131,15 @@ async function loadUserStickerPacks(): Promise<StickerPack[]> {
 			return [];
 		}
 
+		const registry = await loadPackRegistry();
 		const entries = await readDir("stickers", {
 			baseDir: BaseDirectory.AppData,
 		});
 		const packs: StickerPack[] = [];
+		let registryModifed = false;
 
 		for (const entry of entries) {
-			if (entry.isDirectory) {
+			if (entry.isDirectory && entry.name !== "registry.json") {
 				const manifestPath = `stickers/${entry.name}/manifest.json`;
 
 				const manifestExists = await exists(manifestPath, {
@@ -136,13 +154,25 @@ async function loadUserStickerPacks(): Promise<StickerPack[]> {
 					const content = await readTextFile(manifestPath, {
 						baseDir: BaseDirectory.AppData,
 					});
-					const pack = JSON.parse(content);
+					const pack: StickerPack = JSON.parse(content);
+
+					if (!registry.packs.find((p) => p.id === pack.id)) {
+						console.log("Pack not in registry, adding: ", pack.id);
+						registry.packs.push({
+							id: pack.id,
+							order: registry.nextOrder,
+						});
+						registry.nextOrder += 1;
+						registryModifed = true;
+					}
 
 					pack.stickers = await Promise.all(
-						pack.stickers.map(async (s: Sticker) => ({
-							...s,
-							url: await getStickerUrl(s.path),
-						})),
+						pack.stickers
+							.sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+							.map(async (s: Sticker) => ({
+								...s,
+								url: await getStickerUrl(s.path),
+							})),
 					);
 
 					packs.push(pack);
@@ -152,6 +182,16 @@ async function loadUserStickerPacks(): Promise<StickerPack[]> {
 			}
 		}
 
+		if (registryModifed) {
+			await savePackRegistry(registry);
+		}
+
+		packs.sort((a, b) => {
+			const aOrder = registry.packs.find((p) => p.id === a.id)?.order ?? 0;
+			const bOrder = registry.packs.find((p) => p.id === b.id)?.order ?? 0;
+			return aOrder - bOrder;
+		});
+
 		console.log("Loaded packs: ", packs);
 		return packs;
 	} catch (e) {
@@ -160,16 +200,45 @@ async function loadUserStickerPacks(): Promise<StickerPack[]> {
 	}
 }
 
-const stickerPacks = import.meta.glob(
-	"@/assests/stickers/**/*.{png,jpg,jpeg,gif,webp}",
-	{
-		eager: true,
-		query: "?url",
-	},
-);
+async function loadPackRegistry(): Promise<PackRegistry> {
+	try {
+		const registryExists = await exists("stickers/registry.json", {
+			baseDir: BaseDirectory.AppData,
+		});
 
-function getBuiltInStickers() {
-	return stickerPacks;
+		if (!registryExists) {
+			return { packs: [], nextOrder: 0 };
+		}
+
+		const content = await readTextFile("stickers/registry.json", {
+			baseDir: BaseDirectory.AppData,
+		});
+		return JSON.parse(content);
+	} catch (e) {
+		console.error("Failed to load registry: ", e);
+		return { packs: [], nextOrder: 0 };
+	}
+}
+
+async function savePackRegistry(registry: PackRegistry): Promise<void> {
+	await writeTextFile(
+		"stickers/registry.json",
+		JSON.stringify(registry, null, 2),
+		{
+			baseDir: BaseDirectory.AppData,
+		},
+	);
+}
+
+async function addPackToRegistry(packId: string): Promise<number> {
+	const registry = await loadPackRegistry();
+	const order = registry.nextOrder;
+
+	registry.packs.push({ id: packId, order });
+	registry.nextOrder += 1;
+
+	await savePackRegistry(registry);
+	return order;
 }
 
 export type { Sticker, StickerPack };
@@ -179,5 +248,6 @@ export {
 	importStickerPack,
 	saveStickerPackMetadata,
 	loadUserStickerPacks,
-	getBuiltInStickers,
+	savePackRegistry,
+	loadPackRegistry,
 };
