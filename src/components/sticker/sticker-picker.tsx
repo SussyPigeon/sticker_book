@@ -2,6 +2,7 @@ import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
 	addStickersToExistingPack,
+	deleteStickers,
 	importStickerPack,
 	loadUserStickerPacks,
 	type StickerPack,
@@ -66,8 +67,18 @@ const StickerPicker = () => {
 		setSelectedStickers(newSelected);
 	};
 
-	const deleteSelectedStickers = () => {
-		console.log("Delete stickers: ", Array.from(selectedStickers));
+	const deleteSelectedStickers = async () => {
+		const stickerIds = [...selectedStickers];
+		await deleteStickers([...selectedStickers]);
+		setPacks(
+			packs.map((pack) => ({
+				...pack,
+				stickers: pack.stickers.filter(
+					(sticker) => !stickerIds.includes(sticker.id),
+				),
+			})),
+		);
+		console.log("Delete stickers: ", stickerIds);
 		exitEditMode();
 	};
 
@@ -99,7 +110,7 @@ const StickerPicker = () => {
 						</Button>
 						<input
 							type="file"
-							accept="image/png, image/jpegm image/gif, image/webp"
+							accept="image/png, image/jpeg image/gif, image/webp"
 							multiple
 							onChange={handleCreateNewPack}
 							className="hidden"
@@ -175,7 +186,7 @@ const StickerPicker = () => {
 						</Button>
 						<input
 							type="file"
-							accept="image/png, image/jpegm image/gif, image/webp"
+							accept="image/png, image/jpeg image/gif, image/webp"
 							multiple
 							onChange={handleCreateNewPack}
 							className="hidden"
