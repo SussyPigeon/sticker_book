@@ -4,31 +4,37 @@ import {
 	BaseDirectory,
 	exists,
 	mkdir,
-	readDir,
-	readTextFile,
+	remove,
 	writeFile,
-	writeTextFile,
 } from "@tauri-apps/plugin-fs";
+import { getDatabase } from "@/lib/database";
 
 interface StickerPack {
 	id: string;
 	name: string;
+	created_at: number;
+	display_order: number;
+	is_favorite: boolean;
 	stickers: Sticker[];
-	createdAt: number;
-	order: number;
 }
 
 interface Sticker {
 	id: string;
+	pack_id: string;
 	filename: string;
-	path: string;
+	file_path: string;
+	display_order: number;
+	created_at: number;
+	usage_count: number;
+	last_used_at: number | null;
+	is_favorite: boolean;
 	url: string;
-	order: number;
 }
 
-interface PackRegistry {
-	packs: Array<{ id: string; order: number }>;
-	nextOrder: number;
+async function getStickerUrl(relativePath: string): Promise<string> {
+	const appData = await appDataDir();
+	const abosolutePath = `${appData}/${relativePath}`;
+	return convertFileSrc(abosolutePath);
 }
 
 async function initStickerStorage() {
@@ -49,196 +55,251 @@ async function initStickerStorage() {
 }
 
 async function importStickerPack(files: File[]): Promise<StickerPack> {
+	const db = await getDatabase();
 	const packId = crypto.randomUUID();
 	const packDir = `stickers/${packId}`;
+	const now = Date.now();
 
 	await mkdir(packDir, {
 		baseDir: BaseDirectory.AppData,
 		recursive: true,
 	});
 
-	const stickers: Sticker[] = [];
+	const result = await db.select<Array<{ max_order: number | null }>>(
+		"SELECT MAX(display_order) as max_order FROM packs",
+	);
+	const nextPackOrder = (result[0]?.max_order ?? -1) + 1;
+	await db.execute(
+		"INSERT INTO packs (id, name, created_at, display_order, is_favorite) VALUES (?, ?, ?, ?, ?)",
+		[
+			packId,
+			`Pack ${new Date(now).toLocaleDateString()}`,
+			now,
+			nextPackOrder,
+			false,
+		],
+	);
 	const sortedFiles = [...files].sort((a, b) => a.name.localeCompare(b.name));
 
+	const stickers: Sticker[] = [];
 	for (let i = 0; i < sortedFiles.length; i++) {
 		const file = sortedFiles[i];
+		const stickerId = crypto.randomUUID();
 		const destPath = `${packDir}/${file.name}`;
+
 		const arrayBuffer = await file.arrayBuffer();
 		const uint8Array = new Uint8Array(arrayBuffer);
-
 		await writeFile(destPath, uint8Array, {
 			baseDir: BaseDirectory.AppData,
 		});
 
-		const url = await getStickerUrl(destPath);
+		await db.execute(
+			`INSERT INTO stickers
+			(id, pack_id, filename, file_path, display_order, created_at, usage_count, last_used_at, is_favorite)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			[stickerId, packId, file.name, destPath, i, now, 0, null, false],
+		);
 
+		const url = await getStickerUrl(destPath);
 		stickers.push({
-			id: crypto.randomUUID(),
+			id: stickerId,
+			pack_id: packId,
 			filename: file.name,
-			path: destPath,
+			file_path: destPath,
+			display_order: i,
+			created_at: now,
+			usage_count: 0,
+			last_used_at: null,
+			is_favorite: false,
 			url,
-			order: i,
 		});
 
 		console.log("Imported sticker: ", file.name, "URL: ", url);
 	}
 
-	const packOrder = await addPackToRegistry(packId);
-	const pack: StickerPack = {
+	return {
 		id: packId,
-		name: `Pack ${Date.now()}`,
+		name: `Pack ${new Date(now).toLocaleDateString()}`,
+		created_at: now,
+		display_order: nextPackOrder,
+		is_favorite: false,
 		stickers,
-		createdAt: Date.now(),
-		order: packOrder,
 	};
-	await saveStickerPackMetadata(pack);
-
-	return pack;
 }
 
-async function getStickerUrl(relativePath: string): Promise<string> {
-	const appData = await appDataDir();
-	const abosolutePath = `${appData}/${relativePath}`;
-	return convertFileSrc(abosolutePath);
+async function addStickersToExistingPack(
+	packId: string,
+	files: File[],
+): Promise<StickerPack> {
+	const db = await getDatabase();
+	const packDir = `stickers/${packId}`;
+	const now = Date.now();
+
+	const result = await db.select<Array<{ max_order: number | null }>>(
+		"SELECT MAX(display_order) as max_order FROM stickers WHERE pack_id = ?",
+		[packId],
+	);
+	const max_order = result[0]?.max_order ?? -1;
+	const sortedFiles = [...files].sort((a, b) => a.name.localeCompare(b.name));
+	for (let i = 0; i < sortedFiles.length; i++) {
+		const file = sortedFiles[i];
+		const stickerId = crypto.randomUUID();
+		const destPath = `${packDir}/${file.name}`;
+
+		const arrayBuffer = await file.arrayBuffer();
+		const uint8Array = new Uint8Array(arrayBuffer);
+		await writeFile(destPath, uint8Array, {
+			baseDir: BaseDirectory.AppData,
+		});
+
+		await db.execute(
+			`INSERT INTO stickers
+			(id, pack_id, filename, file_path, display_order, created_at, usage_count, last_used_at, is_favorite)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			[
+				stickerId,
+				packId,
+				file.name,
+				destPath,
+				max_order + i + 1,
+				now,
+				0,
+				null,
+				false,
+			],
+		);
+
+		console.log("Added sticker: ", file.name);
+	}
+	return await loadStickerPack(packId);
 }
 
-async function saveStickerPackMetadata(pack: StickerPack) {
-	const manifestPath = `stickers/${pack.id}/manifest.json`;
-	const packToSave = {
-		...pack,
-		stickers: pack.stickers.map((s) => ({
-			id: s.id,
-			filename: s.filename,
-			path: s.path,
-			url: "",
-			order: s.order,
+async function loadStickerPack(packId: string): Promise<StickerPack> {
+	const db = await getDatabase();
+
+	const packResult = await db.select<
+		Array<{
+			id: string;
+			name: string;
+			created_at: number;
+			display_order: number;
+			is_favorite: boolean;
+		}>
+	>("SELECT * FROM packs WHERE id = ?", [packId]);
+
+	if (packResult.length === 0) {
+		throw new Error(`Pack ${packId} not found`);
+	}
+
+	const pack = packResult[0];
+	const stickerResult = await db.select<Array<Omit<Sticker, "url">>>(
+		"SELECT * FROM stickers WHERE pack_id = ? ORDER BY display_order ASC",
+		[packId],
+	);
+	const stickers: Sticker[] = await Promise.all(
+		stickerResult.map(async (s) => ({
+			...s,
+			url: await getStickerUrl(s.file_path),
 		})),
-	};
+	);
 
-	await writeTextFile(manifestPath, JSON.stringify(packToSave, null, 2), {
-		baseDir: BaseDirectory.AppData,
-	});
-	console.log("Saved manifest: ", manifestPath);
+	return {
+		...pack,
+		stickers,
+	};
 }
 
 async function loadUserStickerPacks(): Promise<StickerPack[]> {
-	try {
-		const dirExists = await exists("stickers", {
-			baseDir: BaseDirectory.AppData,
+	const db = await getDatabase();
+
+	const packResult = await db.select<
+		Array<{
+			id: string;
+			name: string;
+			created_at: number;
+			display_order: number;
+			is_favorite: boolean;
+		}>
+	>("SELECT * FROM packs ORDER BY display_order ASC");
+
+	const packs: StickerPack[] = [];
+	for (const pack of packResult) {
+		const stickerResult = await db.select<Array<Omit<Sticker, "url">>>(
+			"SELECT * FROM stickers WHERE pack_id = ? ORDER BY display_order ASC",
+			[pack.id],
+		);
+		const stickers: Sticker[] = await Promise.all(
+			stickerResult.map(async (s) => ({
+				...s,
+				url: await getStickerUrl(s.file_path),
+			})),
+		);
+		packs.push({
+			...pack,
+			stickers,
 		});
-		if (!dirExists) {
-			console.log("Stickers directory does not exist yet");
-			return [];
-		}
+	}
 
-		const registry = await loadPackRegistry();
-		const entries = await readDir("stickers", {
-			baseDir: BaseDirectory.AppData,
-		});
-		const packs: StickerPack[] = [];
-		let registryModifed = false;
+	console.log("Loaded packs: ", packs);
+	return packs;
+}
 
-		for (const entry of entries) {
-			if (entry.isDirectory && entry.name !== "registry.json") {
-				const manifestPath = `stickers/${entry.name}/manifest.json`;
+async function deleteStickers(stickerIds: string[]): Promise<void> {
+	const db = await getDatabase();
 
-				const manifestExists = await exists(manifestPath, {
-					baseDir: BaseDirectory.AppData,
-				});
-				if (!manifestExists) {
-					console.log("No manifest found for:", entry.name);
-					continue;
-				}
+	for (const stickerId of stickerIds) {
+		const result = await db.select<Array<{ file_path: string }>>(
+			"SELECT file_path FROM stickers WHERE id = ?",
+			[stickerId],
+		);
 
-				try {
-					const content = await readTextFile(manifestPath, {
-						baseDir: BaseDirectory.AppData,
-					});
-					const pack: StickerPack = JSON.parse(content);
-
-					if (!registry.packs.find((p) => p.id === pack.id)) {
-						console.log("Pack not in registry, adding: ", pack.id);
-						registry.packs.push({
-							id: pack.id,
-							order: registry.nextOrder,
-						});
-						registry.nextOrder += 1;
-						registryModifed = true;
-					}
-
-					pack.stickers = await Promise.all(
-						pack.stickers
-							.sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-							.map(async (s: Sticker) => ({
-								...s,
-								url: await getStickerUrl(s.path),
-							})),
-					);
-
-					packs.push(pack);
-				} catch (e) {
-					console.error("Failed to load pack: ", e);
-				}
+		if (result.length > 0) {
+			const filePath = result[0].file_path;
+			try {
+				await remove(filePath, { baseDir: BaseDirectory.AppData });
+				console.log("Deleted file: ", filePath);
+			} catch (e) {
+				console.error("Failed to delete file: ", filePath, e);
 			}
 		}
-
-		if (registryModifed) {
-			await savePackRegistry(registry);
-		}
-
-		packs.sort((a, b) => {
-			const aOrder = registry.packs.find((p) => p.id === a.id)?.order ?? 0;
-			const bOrder = registry.packs.find((p) => p.id === b.id)?.order ?? 0;
-			return aOrder - bOrder;
-		});
-
-		console.log("Loaded packs: ", packs);
-		return packs;
-	} catch (e) {
-		console.error("Failed to read stickers directory: ", e);
-		return [];
+		await db.execute("DELETE FROM stickers WHERE id = ?", [stickerId]);
 	}
 }
 
-async function loadPackRegistry(): Promise<PackRegistry> {
-	try {
-		const registryExists = await exists("stickers/registry.json", {
-			baseDir: BaseDirectory.AppData,
-		});
-
-		if (!registryExists) {
-			return { packs: [], nextOrder: 0 };
-		}
-
-		const content = await readTextFile("stickers/registry.json", {
-			baseDir: BaseDirectory.AppData,
-		});
-		return JSON.parse(content);
-	} catch (e) {
-		console.error("Failed to load registry: ", e);
-		return { packs: [], nextOrder: 0 };
-	}
+async function updateStickerOrder(
+	stickerId: string,
+	newOrder: number,
+): Promise<void> {
+	const db = await getDatabase();
+	await db.execute("UPDATE stickers SET display_order = ? WHERE id = ?", [
+		newOrder,
+		stickerId,
+	]);
 }
 
-async function savePackRegistry(registry: PackRegistry): Promise<void> {
-	await writeTextFile(
-		"stickers/registry.json",
-		JSON.stringify(registry, null, 2),
-		{
-			baseDir: BaseDirectory.AppData,
-		},
+async function updatePackOrder(
+	packId: string,
+	newOrder: number,
+): Promise<void> {
+	const db = await getDatabase();
+	await db.execute("UPDATE packs SET display_order = ? WHERE id = ?", [
+		newOrder,
+		packId,
+	]);
+}
+
+async function renamePack(packId: string, newName: string): Promise<void> {
+	const db = await getDatabase();
+	await db.execute("UPDATE packs SET name = ? WHERE id = ?", [newName, packId]);
+}
+
+async function recordStickerUsage(stickerId: string): Promise<void> {
+	const db = await getDatabase();
+	const now = Date.now();
+	await db.execute(
+		"UPDATE stickers SET usage_count = usage_count + 1, last_used_at = ? WHERE id = ?",
+		[now, stickerId],
 	);
-}
-
-async function addPackToRegistry(packId: string): Promise<number> {
-	const registry = await loadPackRegistry();
-	const order = registry.nextOrder;
-
-	registry.packs.push({ id: packId, order });
-	registry.nextOrder += 1;
-
-	await savePackRegistry(registry);
-	return order;
 }
 
 export type { Sticker, StickerPack };
@@ -246,8 +307,12 @@ export type { Sticker, StickerPack };
 export {
 	initStickerStorage,
 	importStickerPack,
-	saveStickerPackMetadata,
+	addStickersToExistingPack,
+	loadStickerPack,
 	loadUserStickerPacks,
-	savePackRegistry,
-	loadPackRegistry,
+	deleteStickers,
+	updateStickerOrder,
+	updatePackOrder,
+	renamePack,
+	recordStickerUsage,
 };

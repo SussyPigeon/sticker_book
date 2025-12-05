@@ -1,10 +1,20 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Button } from "@/components/ui/button";
 import "./App.css";
 import { StickerPicker } from "./components/sticker/sticker-picker";
+import { initDatabase } from "./lib/database";
+import { initStickerStorage } from "./lib/stickers";
 
 function App() {
+	useEffect(() => {
+		const init = async () => {
+			await initDatabase();
+			await initStickerStorage();
+		};
+		init();
+	}, []);
+
 	return (
 		<div className="flex h-screen font-family-sans">
 			{/* Sidebar */}
